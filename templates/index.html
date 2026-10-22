@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VehicleCare AI</title>
+  <style>
+    :root { --navy:#102a43; --blue:#1769aa; --pale:#f2f7fb; --ink:#243b53; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Arial,sans-serif; background:var(--pale); color:var(--ink); }
+    header { background:linear-gradient(120deg,#102a43,#1769aa); color:white; padding:28px 16px; text-align:center; }
+    header h1 { margin:0 0 8px; }
+    header p { margin:0; }
+    main { max-width:1050px; margin:22px auto; padding:0 14px 28px; display:grid; grid-template-columns:1.1fr .9fr; gap:18px; }
+    section { background:white; border-radius:14px; padding:20px; box-shadow:0 4px 16px #102a4312; }
+    h2 { margin-top:0; color:var(--navy); }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    label { display:block; font-size:13px; font-weight:bold; margin-bottom:5px; }
+    input,select { width:100%; padding:10px; border:1px solid #bcccdc; border-radius:8px; background:white; }
+    button { border:0; border-radius:8px; background:var(--blue); color:white; padding:12px 16px; cursor:pointer; font-weight:bold; }
+    button:hover { filter:brightness(.92); }
+    .full { grid-column:1/-1; }
+    .result { border-left:4px solid var(--blue); background:#f5faff; padding:10px 12px; margin:10px 0; border-radius:7px; }
+    .error { background:#fff0f0; color:#9b1c1c; padding:12px; border-radius:8px; }
+    .note { font-size:12px; line-height:1.5; color:#52606d; }
+    .download { margin-top:10px; }
+    footer { text-align:center; padding:10px 16px 24px; font-size:12px; color:#52606d; }
+    @media(max-width:780px) { main { grid-template-columns:1fr; } .grid { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+<header>
+  <h1>🚗 VehicleCare AI 🏍️</h1>
+  <p>Demo maintenance estimate • Service reminder • Mileage calculator • PDF report</p>
+</header>
+<main>
+  <section>
+    <h2>Enter vehicle details</h2>
+    <form method="post">
+      <div class="grid">
+        <div><label>Vehicle type</label><select name="vehicle_type" required>
+          <option value="Bike" {% if form_data.vehicle_type == 'Bike' %}selected{% endif %}>Bike</option>
+          <option value="Car" {% if form_data.vehicle_type == 'Car' %}selected{% endif %}>Car</option>
+        </select></div>
+        <div><label>Vehicle age (years)</label><input type="number" min="0" name="vehicle_age_years" value="{{ form_data.vehicle_age_years }}" required></div>
+        <div><label>Odometer (total km)</label><input type="number" min="0" step="1" name="odometer_km" value="{{ form_data.odometer_km }}" required></div>
+        <div><label>Mileage (km/l)</label><input type="number" min="0.1" step="0.1" name="mileage_kmpl" value="{{ form_data.mileage_kmpl }}" required></div>
+        <div><label>Engine temperature (°C)</label><input type="number" min="0" step="0.1" name="engine_temp_c" value="{{ form_data.engine_temp_c }}" required></div>
+        <div><label>Battery voltage (V)</label><input type="number" min="0.1" step="0.01" name="battery_voltage" value="{{ form_data.battery_voltage }}" required></div>
+        <div><label>Months since service</label><input type="number" min="0" name="months_since_service" value="{{ form_data.months_since_service }}" required></div>
+        <div><label>Warning light currently on?</label><select name="warning_light">
+          <option value="0" {% if form_data.warning_light == '0' %}selected{% endif %}>No</option>
+          <option value="1" {% if form_data.warning_light == '1' %}selected{% endif %}>Yes</option>
+        </select></div>
+        <div><label>Last service date</label><input type="date" name="last_service_date" value="{{ form_data.last_service_date }}" required></div>
+        <div><label>Km driven since service</label><input type="number" min="0" step="1" name="km_since_service" value="{{ form_data.km_since_service }}" required></div>
+        <div><label>Trip distance (km)</label><input type="number" min="0" step="0.1" name="distance_km" value="{{ form_data.distance_km }}" required></div>
+        <div><label>Fuel price per litre (₹)</label><input type="number" min="0" step="0.01" name="fuel_price" value="{{ form_data.fuel_price }}" required></div>
+        <div class="full"><button type="submit">Generate Vehicle Report</button></div>
+      </div>
+    </form>
+    <p class="note">For the reminder, this demo uses 6 months or 5,000 km for bikes / 10,000 km for cars. These are only sample settings—not universal service intervals. Check your vehicle owner's manual.</p>
+  </section>
+  <section>
+    <h2>Your result</h2>
+    {% if error %}<p class="error">{{ error }}</p>{% endif %}
+    {% if result %}
+      {% for key, value in result.items() if not key.startswith('_') %}
+        <div class="result"><strong>{{ key }}:</strong><br>{{ value }}</div>
+      {% endfor %}
+      <form method="post" action="/download-report" class="download">
+        {% for key, value in result._download_fields.items() %}
+          <input type="hidden" name="{{ key }}" value="{{ value }}">
+        {% endfor %}
+        <button type="submit">Download PDF report</button>
+      </form>
+    {% else %}
+      <p>Fill the form and click <strong>Generate Vehicle Report</strong>. The result will appear here.</p>
+      <div class="result"><strong>ML prediction</strong><br>Educational maintenance category from the Random Forest model.</div>
+      <div class="result"><strong>Service reminder</strong><br>Checks entered service date and kilometres since service.</div>
+      <div class="result"><strong>Mileage calculator</strong><br>Fuel required = trip distance ÷ mileage.</div>
+      <div class="result"><strong>PDF report</strong><br>Download a copy of the result.</div>
+    {% endif %}
+    <p class="note"><strong>Safety:</strong> This is not a diagnostic tool. If a warning light is on, the engine overheats, brakes feel abnormal, or the vehicle behaves unsafely, stop safely and contact a qualified mechanic.</p>
+  </section>
+</main>
+<footer>VehicleCare AI • Student mini project • Synthetic training data, for learning only</footer>
+</body>
+</html>
